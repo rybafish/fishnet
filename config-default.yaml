@@ -1,0 +1,23 @@
+#
+# S3 downloader related config below
+#
+
+# loglevel, 3 is default, 0 - no log at all, 5 - log all messages (including SQL strings)
+loglevel: 3
+
+# log mode: duplicate, file, 
+logmode: duplicate
+
+
+# AWS S3 bucket name to download stuff from
+s3_bucket: 'some_bucket'
+
+# target folder for downloaded stuff
+download_folder: stage
+
+# delete remote files or not
+delete_remote_files: True
+
+#
+# S3 log parsing related stuff below
+#
