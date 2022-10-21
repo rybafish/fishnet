@@ -1,0 +1,116 @@
+Some details on AWS S3 access logs structure and a couple of useful selects
+
+
+Useful selects:
+select id, timestamp load_ts, datetime(date || ' ' || time, '+4 hours') access_ts, "c-ip" ip, country || ', ' || city loc, "cs-uri-stem" uri, "ssl-protocol" ssl, "sc-status" st from access_cf left join ipcache on "c-ip" = ip order by id desc limit 16;
+select id, timestamp load_ts, datetime(date || ' ' || time, '+4 hours') access_ts, "c-ip" ip, country || ', ' || city loc, replace("cs(User-Agent)", '%20', ' ') agent, "sc-status" st from access_cf left join ipcache on "c-ip" = ip where "cs-uri-stem" = '/version' order by 2 desc limit 16;
+
+select count(*) cnt, ip, loc from b group by ip, loc order by cnt desc;
+
+select id, version, timestamp, date, time, "c-ip", "x-host-header", "cs-uri-stem", "sc-status", "cs(Referer)", substr("cs(User-Agent)", 0, 40) agent from access_cf;
+
+CloudFront access log
+
+date												2022-10-10
+time                                                22:17:31
+x-edge-location                                     FRA56-P6
+sc-bytes                                            1133
+c-ip                                                37.252.92.10
+cs-method                                           GET
+cs(Host)                                            d143yd6uarkjun.cloudfront.net
+cs-uri-stem                                         /version
+sc-status                                           200
+cs(Referer)                                         -
+cs(User-Agent)                                      Mozilla/5.0
+cs-uri-query                                        -
+cs(Cookie)                                          -
+x-edge-result-type                                  Hit
+x-edge-request-id                                   5k2cWGma9JLo1zm930IJMJcxRfxwgCnFveL9YT76AoAcx49vfW_nYQ==
+x-host-header                                       filestest.rybafish.net
+cs-protocol                                         https
+cs-bytes                                            162
+time-taken                                          0.000
+x-forwarded-for                                     -
+ssl-protocol                                        TLSv1.3
+ssl-cipher                                          TLS_AES_128_GCM_SHA256
+x-edge-response-result-type                         Hit
+cs-protocol-version                                 HTTP/1.1
+fle-status                                          -
+fle-encrypted-fields                                -
+c-port                                              57675
+time-to-first-byte                                  0.000
+x-edge-detailed-result-type                         Hit
+sc-content-type                                     binary/octet-stream
+sc-content-len                                      661
+sc-range-start                                      -
+sc-range-end                                        -
+
+
+S3: https://docs.aws.amazon.com/AmazonS3/latest/userguide/LogFormat.html
+Bucket Owner										9509a447d0e5ddbc577482add16849867e0d6911702516267e5ce02f763a17f1
+Bucket                                              filestest.rybafish.net
+Time                                                [10/Oct/2022:17:17:24 +0000]
+Remote IP                                           79.104.53.14
+Requester                                           -
+Request ID                                          EBA051D41J21KJB5
+Operation                                           REST.GET.BUCKET
+Key                                                 -
+Request-URI                                         "GET / HTTP/1.1"
+HTTP status                                         403
+Error Code                                          AccessDenied
+Bytes Sent                                          243
+Object Size                                         -
+Total Time                                          11
+Turn-Around Time                                    -
+Referer                                             "-"
+User-Agent                                          "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:59.0) Gecko/20100101 Firefox/59.0"
+Version Id                                          -
+Host Id                                             labs5EnhixiInd4vRa/LEL8JgqoPAbMMt89LUyrvGK8M9TJh4UJqfQn6MmnoHzzZBorT/3IUpBE=
+Signature Version                                   -
+Cipher Suite                                        -
+Authentication Type                                 -
+Host Header                                         filestest.rybafish.net.s3.eu-central-1.amazonaws.com
+TLS version                                         -
+Access Point ARN (Amazon Resource Name)             -
+
+
+
+CloudFront SQL
+create table access_cf (
+        id                                  integer primary key autoincrement,
+        version                             varchar(64),
+        timestamp                           timestamp,
+        "date"                              char(10),
+        "time"                              char(8),
+        "x-edge-location"                   varchar(32),
+        "sc-bytes"                          int,
+        "c-ip"                              char(64),		-- ipv6...
+        "cs-method"                         varchar(16),
+        "cs(Host)"                          varchar(255),
+        "cs-uri-stem"                       varchar(255),
+        "sc-status"                         int,
+        "cs(Referer)"                       varchar(255),
+        "cs(User-Agent)"                    varchar(255),
+        "cs-uri-query"                      varchar(8),
+        "cs(Cookie)"                        varchar(8),
+        "x-edge-result-type"                varchar(8),
+        "x-edge-request-id"                 varchar(64),
+        "x-host-header"                     varchar(64),
+        "cs-protocol"                       varchar(8),
+        "cs-bytes"                          int,
+        "time-taken"                        real,
+        "x-forwarded-for"                   varchar(64),
+        "ssl-protocol"                      varchar(16),
+        "ssl-cipher"                        varchar(16),
+        "x-edge-response-result-type"       varchar(8),
+        "cs-protocol-version"               varchar(8),
+        "fle-status"                        varchar(8),
+        "fle-encrypted-fields"              varchar(8),
+        "c-port"                            int,
+        "time-to-first-byte"                real,
+        "x-edge-detailed-result-type"       varchar(8),
+        "sc-content-type"                   varchar(16),
+        "sc-content-len"                    int,
+        "sc-range-start"                    varchar(8),
+        "sc-range-end"                      varchar(8)
+);
