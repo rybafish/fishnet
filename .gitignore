@@ -1,0 +1,49 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+
+#local backup dir
+bkp/
+
+#exclude pyhdb folder
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# local run batch
+*.bat
+
+# npp backups
+*.bak
+
+# archives, just in case
+*.7z
+*.zip
+
+# avoid updating the config
+config.yaml
+
+#and any yamls
+*.yaml
+
+# log file 
+.log
+
+# stage folder
+stage/
+
+# sqlite db
+*.db
+
+#my comments 
+ipcache.txt

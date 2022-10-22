@@ -2,7 +2,7 @@
 # Script loads given folder with Amazon S3 access logs into sqlite database.
 # currently only CloudFront access logs supported.
 #
-# FishNet, 2022-10-21, EVN
+# FishNet, 2022-10-11, EVN
 #
 
 

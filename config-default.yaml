@@ -21,3 +21,24 @@ delete_remote_files: True
 #
 # S3 log parsing related stuff below
 #
+
+# sqlite database file
+db_file: '<some_sqlite_file>.db'
+
+# table name for the cloud front access logs
+cf_table: '<table_name>'
+
+# folder where logs to be processed located
+logs_folder: 'logfolder'
+
+# folder to move processed log files
+bkp_folder: 'logfolder\.processed'
+
+#
+# Locations related settings
+# 
+
+# Warning: the location script reuses cf_table and db_file settings
+
+# column name in cf_table with ip adress
+ip_column: '<ip column>'

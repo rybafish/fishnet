@@ -1,11 +1,12 @@
 #
-# Script to download stuff from specified S3 bucket
-# access keys are to be maintained in ~\.aws\credentials file
+# Script to download stuff from specified S3 bucket.
+# 
+# Access keys are to be maintained in ~\.aws\credentials file
 # in case of windows usage: users\<username>\.aws\credentials
 #
-# rest of configuration maintained in config.yaml
+# Rest of configuration maintained in config.yaml
 #
-# 2022-10-18, EVN
+# FishNet, 2022-10-10, EVN
 #
 
 
@@ -137,8 +138,9 @@ def extract(bucketName, folder, delFlag=False):
         except ClientError as e:
             log(f'[E] S3 Exception: {e}' )
         
-    log('-')
-    log(f'Total pages: {intToStr(pageNumber)}, items: {intToStr(totalItems)}, size: {fileBytes(totalSize)}')
+    if totalItems > 0:
+        log('-')
+        log(f'Total pages: {intToStr(pageNumber)}, items: {intToStr(totalItems)}, size: {fileBytes(totalSize)}')
     
     return totalItems
     
