@@ -115,19 +115,27 @@ def extract(bucketName, folder, delFlag=False):
                 pageSize = 0
                 i = 0
                 
-                with profiler('Iterate Items'):
-                    for f in items:
-                        pageSize += f['Size']
-                        
-                        log(f"{pageNumber:3} {f['Key']} {f['LastModified']} {f['Size']}{deleteFlag}")
-                        
-                        downloadFile(s3client, bucketName, f['Key'], folder, f['LastModified'].timestamp())
+                try:
+                    with profiler('Iterate Items'):
+                        for f in items:
+                            pageSize += f['Size']
+                            
+                            log(f"{pageNumber:3} {f['Key']} {f['LastModified']} {f['Size']}{deleteFlag}")
+                            
+                            downloadFile(s3client, bucketName, f['Key'], folder, f['LastModified'].timestamp())
 
-                        if deleteFlag:
-                            with profiler('Object delete'):
-                                s3.Object(bucketName, f['Key']).delete()
-                        
-                        i+=1
+                            if deleteFlag:
+                                with profiler('Object delete'):
+                                    s3.Object(bucketName, f['Key']).delete()
+                            
+                            i+=1
+                except KeyboardInterrupt:
+                    log('[!] KeyboardInterrupt')
+                    log('will report partically incorrect data.')
+                    
+                    totalItems += i
+                    totalSize += pageSize
+                    break
 
                 pageNumber += 1
                 totalItems += len(items)

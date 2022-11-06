@@ -209,9 +209,9 @@ def numberToStr(x, grp=True, digits=None):
 
 def fileBytes(size):
     if size >= 1024*1024*1024:
-        return numberToStr(round(size/1024*1024*1024, 1)) + ' gb'
+        return numberToStr(round(size/(1024*1024*1024), 1)) + ' gb'
     elif size >= 1024*1024:
-        return numberToStr(round(size/1024*1024, 1)) + ' mb'
+        return numberToStr(round(size/(1024*1024), 1)) + ' mb'
     elif size >= 1024*10:
         return numberToStr(round(size/1024, 1)) + ' kb'
     else:
