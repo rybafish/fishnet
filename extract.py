@@ -120,7 +120,9 @@ def extract(bucketName, folder, delFlag=False):
                         for f in items:
                             pageSize += f['Size']
                             
-                            log(f"{pageNumber:3} {f['Key']} {f['LastModified']} {f['Size']}{deleteFlag}")
+                            fileSize = fileBytes(f['Size'])
+                            
+                            log(f"{pageNumber:3} {i:4} {f['Key']} {f['LastModified']} {fileSize:>8}{deleteFlag}")
                             
                             downloadFile(s3client, bucketName, f['Key'], folder, f['LastModified'].timestamp())
 
@@ -131,7 +133,7 @@ def extract(bucketName, folder, delFlag=False):
                             i+=1
                 except KeyboardInterrupt:
                     log('[!] KeyboardInterrupt')
-                    log('will report partically incorrect data.')
+                    log('will report partially incorrect data.')
                     
                     totalItems += i
                     totalSize += pageSize

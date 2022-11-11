@@ -136,7 +136,7 @@ class Profiler():
             
         if nothing != 0:
             log('-')
-            log(f'{"Total":{maxLen}} {humanize(total):>{countLen}},{totalTime:>12f} s.')
+            log(f'{"Total":{maxLen}} {humanize(total):>{countLen}}, {totalTime:>12f} s.')
             log('Total duration normally exceeds sum of entries due to nested calls.')
             log(f'Profiler itself: {total*nothing:g} sec. Executions: {total}.')
 

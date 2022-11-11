@@ -31,7 +31,14 @@ def moveToBackup(src, dst, file):
     
     os.rename(srcFile, dstFile)
 
-def processFile(db, table, srcFolder, file, bkpFolder):
+def processCFFile(db, table, srcFolder, file, bkpFolder):
+    # should read and parse s3 access log
+    # prepare the headers
+    # hopefully use the same persist call to store parsed data
+    # support on the persist part will be required... (at least due to the different table structure)
+    pass
+    
+def processCFFile(db, table, srcFolder, file, bkpFolder):
     '''
         Opens a gzipped file and does headers/rows parsing
         Executes immidiate insertion of the results into the database (using persist.py)
@@ -92,6 +99,10 @@ def processFolder(db, table, srcFolder, bkpFolder):
         returns number of files tried to process, even failed ones count
     '''
     
+    def isS3File(testname):
+        # very basich check if the file name seems to be a regular s3 access log file
+        pass
+    
     def isCFFile(testname):
         return testname[-3:] == '.gz' and not os.path.isdir(testname)
     
@@ -103,7 +114,11 @@ def processFolder(db, table, srcFolder, bkpFolder):
         
         if isCFFile(filename):
             i += 1
-            processFile(db, table, srcFolder, f, bkpFolder)
+            processCFFile(db, table, srcFolder, f, bkpFolder)
+        elif isS3File:
+            i += 1*0 # not yet
+            log(f'[W] not yet... {f}')
+            processS3File(db, table, srcFolder, f, bkpFolder)
         else:
             if not os.path.isdir(filename):
                 log(f'[W] not a CF log file: {filename}, skipped', 2)
@@ -115,7 +130,5 @@ def processFolder(db, table, srcFolder, bkpFolder):
     return i
             
 if __name__ == '__main__':
-    #testLoad(cfg_path)
-    #processFile(cfg_dbfile, cfg_table, r'C:\home\dug\ryba.logs\stage\ryba.logs\cf_\E3J87PHO9IHFVT.2022-10-10-18.58364486.gz')
     if processFolder(cfg_dbfile, cfg_cf_table, cfg_path, cfg_bkp):
         profiler.report()
