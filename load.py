@@ -16,7 +16,7 @@ from utils import profiler, log, cfg
 
 cfg_dbfile = cfg('db_file', mandatory=True)
 cfg_cf_table = cfg('cf_table', mandatory=True)
-cfg_s3_table = cfg('s3_table', mandatory=True)
+cfg_s3_table = cfg('s3_table', mandatory=False)
 
 cfg_path = cfg('logs_folder', mandatory=True)
 cfg_bkp = cfg('bkp_folder', mandatory=True)
@@ -187,7 +187,10 @@ def processFolder(db, table_cf, table_s3, srcFolder, bkpFolder):
             processCFFile(db, table_cf, srcFolder, f, bkpFolder)
         elif isS3File(f):
             i += 1 # not yet
-            processS3File(db, table_s3, srcFolder, f, bkpFolder, i)
+            if table_s3:
+                processS3File(db, table_s3, srcFolder, f, bkpFolder, i)
+            else:
+                raise Exception('no table_s3 defined in config file')
         else:
             if not os.path.isdir(filename):
                 log(f'[W] not a CF log file: {filename}, skipped', 2)
