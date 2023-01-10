@@ -22,14 +22,45 @@ from utils import log, profiler, cfg
 config_dbfile = cfg('db_file', mandatory=True)
 config_table = cfg('cf_table', mandatory=True)
 
-def createTable(cur, table):
+def createTable(cur, table, t):
     '''
         creatse table structure to store cloudFront access logs
         
         cur:    open sqlite cursor
         table:  table name
     '''
-    create = f'''create table {table} (
+    create_s3 = f'''create table {table} (
+        id                                  integer primary key autoincrement,
+        version                             varchar(64),
+        timestamp                           timestamp,
+        bucketowner		                    varchar(64),
+        bucket                              varchar(64),
+        request_ts                          timestamp,
+        ip		                            varchar(64),
+        requester		                    varchar(64),
+        requestid		                    varchar(32),
+        operation		                    varchar(32),
+        key		                            varchar(32),
+        request_uri		                    varchar(128),
+        httpstatus		                    char(3),
+        errorcode		                    varchar(16),
+        bytessent		                    int,
+        objectsize		                    int,
+        totaltime		                    int,
+        turnaroundtime                      int,
+        referrer		                    varchar(128),
+        useragent		                    varchar(128),
+        versionid		                    varchar(16),
+        hostid                              varchar(80),
+        sigv                                varchar(16),
+        ciphersuite		                    varchar(16),
+        authtype		                    varchar(16),
+        endpoint		                    varchar(64),
+        tlsversion		                    varchar(16)
+    )
+    '''
+    
+    create_cf = f'''create table {table} (
         id                                  integer primary key autoincrement,
         version                             varchar(64),
         timestamp                           timestamp,
@@ -69,6 +100,11 @@ def createTable(cur, table):
     );
     '''
     
+    if t == 'CF':
+        create = create_cf
+    else:
+        create = create_s3
+    
     log(f'Creating the table {table}...')
     try:
         cur.execute(create)
@@ -79,17 +115,17 @@ def createTable(cur, table):
     return
     
     
-def checkTable(cur, table):
+def checkTable(cur, table, t):
     '''Checks if the table exists, creates one if not'''
     cur.execute(f"select name from sqlite_master where type='table' AND name='{table}'")
     
     rows = cur.fetchall()
     
     if not rows:
-        createTable(cur, table)
+        createTable(cur, table, t)
         
         
-def persistFile(db_file, table, headers, rows):
+def persistFile(db_file, table, headers, rows, t, prefix=''):
     ''''
         Pesrists rows into a given sqlite table
         
@@ -98,6 +134,7 @@ def persistFile(db_file, table, headers, rows):
         table:      name of the table to persist data in
         headers:    list of headers to compose an insert statement
         rows:       list of rows - data to be stored, each row also is a list of values
+        t:          log file type: CF or S3 (regular s3 access log)
         
         if the structure of headers does not match the structure of the created table
         hopefully, it will fail and somehow manifest the error. This is expected
@@ -107,14 +144,18 @@ def persistFile(db_file, table, headers, rows):
     '''
     conn = None
     
-    try:
-        conn = sqlite3.connect(db_file)
-        cur = conn.cursor()
-    except Error as e:
-        log(str(e), 2)
-        return None
+    if prefix:
+        prefix = f'{prefix:>6} '
 
-    checkTable(cur, table)
+    with profiler('open db file'):
+        try:
+            conn = sqlite3.connect(db_file)
+            cur = conn.cursor()
+        except Error as e:
+            log(str(e), 2)
+            return None
+
+    checkTable(cur, table, t)
     
     headersStr = '"' + '", "'.join(headers) + '"'
     
@@ -131,7 +172,7 @@ def persistFile(db_file, table, headers, rows):
         cur.execute(f"select count(*) from {table} where version=?", [file])
         cnt = cur.fetchall()
         if cnt and cnt[0][0] > 0:
-            log(f'[ W  ] {file} already exists, will skip')
+            log(f'{prefix}[ W  ] {file} already exists, will skip')
             return 0
 
     valuesStr = ('?, '*len(rows[0]))[:-2]
@@ -149,7 +190,7 @@ def persistFile(db_file, table, headers, rows):
                 return None
         
     with profiler('persist inserts commit'):
-        log(f'[ ok ] {file} done, {c} records')
+        log(f'{prefix}[ ok ] {file} done, {c} records')
         conn.commit()   
         
     return c

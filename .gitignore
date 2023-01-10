@@ -38,6 +38,8 @@ config.yaml
 
 # log file 
 .log
+.logbkp
+
 
 # stage folder
 stage/
