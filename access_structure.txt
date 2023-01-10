@@ -75,6 +75,7 @@ Access Point ARN (Amazon Resource Name)             -
 
 
 
+
 CloudFront SQL
 create table access_cf (
         id                                  integer primary key autoincrement,
@@ -114,3 +115,30 @@ create table access_cf (
         "sc-range-start"                    varchar(8),
         "sc-range-end"                      varchar(8)
 );
+
+
+s3 sql
+bucketowner		 varchar(64),
+bucket           varchar(64),
+request_ts       timestamp,
+ip		         varchar(64),
+requester		 varchar(64),
+requestid		 varchar(32),
+operation		 varchar(32),
+key		         varchar(32),
+request_uri		 varchar(128),
+httpstatus		 char(3),
+errorcode		 varchar(16),
+bytessent		 int,
+objectsize		 int,
+totaltime		 int,
+turnaroundtime   int,
+referrer		 varchar(128),
+useragent		 varchar(128),
+versionid		 varchar(16),
+hostid           varchar(80),
+sigv             varchar(16),
+ciphersuite		 varchar(16),
+authtype		 varchar(16),
+endpoint		 varchar(64),
+tlsversion		 varchar(16)

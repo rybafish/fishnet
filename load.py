@@ -8,6 +8,7 @@
 
 import gzip
 import os
+import re
 from datetime import datetime
 
 import persist
@@ -15,6 +16,7 @@ from utils import profiler, log, cfg
 
 cfg_dbfile = cfg('db_file', mandatory=True)
 cfg_cf_table = cfg('cf_table', mandatory=True)
+cfg_s3_table = cfg('s3_table', mandatory=True)
 
 cfg_path = cfg('logs_folder', mandatory=True)
 cfg_bkp = cfg('bkp_folder', mandatory=True)
@@ -31,18 +33,75 @@ def moveToBackup(src, dst, file):
     
     os.rename(srcFile, dstFile)
 
-def processCFFile(db, table, srcFolder, file, bkpFolder):
+@profiler
+def processS3File(db, table, srcFolder, file, bkpFolder, count):
     # should read and parse s3 access log
     # prepare the headers
     # hopefully use the same persist call to store parsed data
     # support on the persist part will be required... (at least due to the different table structure)
-    pass
     
+    headers = ['VERSION', 'TIMESTAMP'] + ['bucketowner',
+        'bucket',
+        'request_ts',
+        'ip',
+        'requester',
+        'requestid',
+        'operation',
+        'key',
+        'request_uri',
+        'httpstatus',
+        'errorcode',
+        'bytessent',
+        'objectsize',
+        'totaltime',
+        'turnaroundtime',
+        'referrer',
+        'useragent',
+        'versionid',
+        'hostid',
+        'sigv',
+        'ciphersuite',
+        'authtype',
+        'endpoint',
+        'tlsversion']
+        
+    rows = []
+        
+    with profiler('compile regexp'):
+        # https://aws.amazon.com/premiumsupport/knowledge-center/analyze-logs-athena/
+        rowReg = re.compile('([^ ]*) ([^ ]*) \\[(.*?)\\] ([^ ]*) ([^ ]*) ([^ ]*) ([^ ]*) ([^ ]*) (\"[^\"]*\"|-) (-|[0-9]*) ([^ ]*) ([^ ]*) ([^ ]*) ([^ ]*) ([^ ]*) ([^ ]*) (\"\"?[^\"]*\"\"?|-) ([^ ]*)(?: ([^ ]*) ([^ ]*) ([^ ]*) ([^ ]*) ([^ ]*) ([^ ]*))?.*$')
+    
+    filename = os.path.join(srcFolder, file)
+    
+    ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    with profiler('Open/Parse S3'):
+        with open(filename, mode='rt') as f:
+            
+            i = 0
+            
+            filerows = f.read().splitlines()
+            
+            for row in filerows:
+                i += 1
+        
+                m = rowReg.match(row)
+                
+                if m:
+                    rows.append([file, ts] + list(m.groups()))
+                else:
+                    log(f'[E] parsing error: {file}/{i}')
+                    return None
+                
+    if persist.persistFile(db, table, headers, rows, 'S3', count):
+        moveToBackup(srcFolder, bkpFolder, file)
+    
+@profiler    
 def processCFFile(db, table, srcFolder, file, bkpFolder):
     '''
         Opens a gzipped file and does headers/rows parsing
         Executes immidiate insertion of the results into the database (using persist.py)
-        Processed file moved to 
+        Processed file moved to bkpFolder
         
         parameters
         db:         sqlite database file to connect to
@@ -88,10 +147,10 @@ def processCFFile(db, table, srcFolder, file, bkpFolder):
 
     headers = ['VERSION', 'TIMESTAMP'] + headers
     
-    if persist.persistFile(db, table, headers, rows):
+    if persist.persistFile(db, table, headers, rows, 'CF'):
         moveToBackup(srcFolder, bkpFolder, file)
 
-def processFolder(db, table, srcFolder, bkpFolder):
+def processFolder(db, table_cf, table_s3, srcFolder, bkpFolder):
     '''Loads CF files from the specified folder using persist.py
         Only current folder, without subfolders
         Only .gz files considered
@@ -99,14 +158,25 @@ def processFolder(db, table, srcFolder, bkpFolder):
         returns number of files tried to process, even failed ones count
     '''
     
+    # 2022-11-11-16-18-18-E54A0E42471A1A08
+    #fileMask = re.compile(r'^\d\d\d\d-\d\d-\d\d-d\d-\d\d-\d\d-\w+$')
+    fileMask = re.compile(r'^\d\d\d\d-\d\d-\d\d-\d\d-\d\d-\d\d-[0-9A-F]+$')
+    
     def isS3File(testname):
         # very basich check if the file name seems to be a regular s3 access log file
-        pass
-    
+        
+        #print(testname)
+        
+        if fileMask.match(testname):
+            return True
+        else:
+            return False
+            
     def isCFFile(testname):
         return testname[-3:] == '.gz' and not os.path.isdir(testname)
     
-    files = os.listdir(srcFolder)
+    with profiler('list files'):
+        files = os.listdir(srcFolder)
     
     i = 0
     for f in files:
@@ -114,11 +184,10 @@ def processFolder(db, table, srcFolder, bkpFolder):
         
         if isCFFile(filename):
             i += 1
-            processCFFile(db, table, srcFolder, f, bkpFolder)
-        elif isS3File:
-            i += 1*0 # not yet
-            log(f'[W] not yet... {f}')
-            processS3File(db, table, srcFolder, f, bkpFolder)
+            processCFFile(db, table_cf, srcFolder, f, bkpFolder)
+        elif isS3File(f):
+            i += 1 # not yet
+            processS3File(db, table_s3, srcFolder, f, bkpFolder, i)
         else:
             if not os.path.isdir(filename):
                 log(f'[W] not a CF log file: {filename}, skipped', 2)
@@ -130,5 +199,9 @@ def processFolder(db, table, srcFolder, bkpFolder):
     return i
             
 if __name__ == '__main__':
-    if processFolder(cfg_dbfile, cfg_cf_table, cfg_path, cfg_bkp):
+    try:
+        if processFolder(cfg_dbfile, cfg_cf_table, cfg_s3_table, cfg_path, cfg_bkp):
+            profiler.report()
+    except KeyboardInterrupt:
+        log('[ .. ] Keyboard interrupt')
         profiler.report()
