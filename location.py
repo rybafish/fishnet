@@ -48,7 +48,7 @@ def checkTable(cur):
 def getIPs(cur, table, ipColumn):
     '''Extracts list if distintct IPs from the access table not existing in ipcache table'''
 
-    cur.execute(f'select distinct "{ipColumn}" from {table} where "{ipColumn}" not in (select ip from ipcache)')
+    cur.execute(f'select distinct "{ipColumn}" from {table} where "{ipColumn}" not in (select ip from ipcache where country is not null)')
     
     ips = []
     
@@ -72,7 +72,7 @@ def enrichIPs(db_file, table, ipColumn):
     
     with profiler('Extract Geo'):
         ips = getIPs(cur, table, ipColumn)
-    
+
     for ip in ips:
         g = geocoder.ipinfo(ip)
         
