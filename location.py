@@ -76,6 +76,9 @@ def enrichIPs(db_file, table, ipColumn):
     for ip in ips:
         g = geocoder.ipinfo(ip)
         
+        if g.country is None:   # seems nothing extracted, skip
+            continue
+
         try:
             cur.execute('insert into ipcache (ip, country, state, city) values(?, ?, ?, ?)', [ip, g.country, g.state, g.city])
         except Error as e:
