@@ -146,8 +146,12 @@ def processCFFile(db, ts, table, srcFolder, file, bkpFolder):
 
     headers = ['VERSION', 'TIMESTAMP'] + headers
     
-    if persist.persistFile(db, table, headers, rows, 'CF'):
+    c = persist.persistFile(db, table, headers, rows, 'CF')
+    if c:
         moveToBackup(srcFolder, bkpFolder, file)
+
+
+    return c
 
 def processFolder(db, table_cf, table_s3, srcFolder, bkpFolder):
     '''Loads CF files from the specified folder using persist.py
@@ -180,12 +184,13 @@ def processFolder(db, table_cf, table_s3, srcFolder, bkpFolder):
     ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
     i = 0
+    c = 0
     for f in files:
         filename = os.path.join(srcFolder, f)
 
         if isCFFile(filename):
             i += 1
-            processCFFile(db, ts, table_cf, srcFolder, f, bkpFolder)
+            c += processCFFile(db, ts, table_cf, srcFolder, f, bkpFolder)
         elif isS3File(f):
             i += 1 # not yet
             if table_s3:
@@ -199,6 +204,8 @@ def processFolder(db, table_cf, table_s3, srcFolder, bkpFolder):
     if i == 0:
         log('Nothing to process.')
         return 0
+    else:
+        log(f'Files processed: {i}, records created: {c}')
         
     return i
             
