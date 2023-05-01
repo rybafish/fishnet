@@ -16,7 +16,7 @@ from utils import profiler, log, cfg
 
 cfg_dbfile = cfg('db_file', mandatory=True)
 cfg_cf_table = cfg('cf_table', mandatory=True)
-cfg_s3_table = cfg('s3_table', mandatory=True)
+cfg_s3_table = cfg('s3_table', mandatory=False)
 
 cfg_path = cfg('logs_folder', mandatory=True)
 cfg_bkp = cfg('bkp_folder', mandatory=True)
@@ -34,7 +34,7 @@ def moveToBackup(src, dst, file):
     os.rename(srcFile, dstFile)
 
 @profiler
-def processS3File(db, table, srcFolder, file, bkpFolder, count):
+def processS3File(db, ts, table, srcFolder, file, bkpFolder, count):
     # should read and parse s3 access log
     # prepare the headers
     # hopefully use the same persist call to store parsed data
@@ -73,8 +73,6 @@ def processS3File(db, table, srcFolder, file, bkpFolder, count):
     
     filename = os.path.join(srcFolder, file)
     
-    ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
     with profiler('Open/Parse S3'):
         with open(filename, mode='rt') as f:
             
@@ -97,7 +95,7 @@ def processS3File(db, table, srcFolder, file, bkpFolder, count):
         moveToBackup(srcFolder, bkpFolder, file)
     
 @profiler    
-def processCFFile(db, table, srcFolder, file, bkpFolder):
+def processCFFile(db, ts, table, srcFolder, file, bkpFolder):
     '''
         Opens a gzipped file and does headers/rows parsing
         Executes immidiate insertion of the results into the database (using persist.py)
@@ -105,6 +103,7 @@ def processCFFile(db, table, srcFolder, file, bkpFolder):
         
         parameters
         db:         sqlite database file to connect to
+        ts:         load timestamp
         table:      target table to store parsed values
         srcFolder:  source folder with files
         file:       filename with cloudfront logs
@@ -119,7 +118,7 @@ def processCFFile(db, table, srcFolder, file, bkpFolder):
     #file = os.path.basename(filename)
     filename = os.path.join(srcFolder, file)
     
-    ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    # ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
     try:
         with gzip.open(filename, mode='rt') as f:
@@ -147,8 +146,12 @@ def processCFFile(db, table, srcFolder, file, bkpFolder):
 
     headers = ['VERSION', 'TIMESTAMP'] + headers
     
-    if persist.persistFile(db, table, headers, rows, 'CF'):
+    c = persist.persistFile(db, table, headers, rows, 'CF')
+    if c:
         moveToBackup(srcFolder, bkpFolder, file)
+
+
+    return c
 
 def processFolder(db, table_cf, table_s3, srcFolder, bkpFolder):
     '''Loads CF files from the specified folder using persist.py
@@ -177,17 +180,23 @@ def processFolder(db, table_cf, table_s3, srcFolder, bkpFolder):
     
     with profiler('list files'):
         files = os.listdir(srcFolder)
-    
+
+    ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
     i = 0
+    c = 0
     for f in files:
         filename = os.path.join(srcFolder, f)
-        
+
         if isCFFile(filename):
             i += 1
-            processCFFile(db, table_cf, srcFolder, f, bkpFolder)
+            c += processCFFile(db, ts, table_cf, srcFolder, f, bkpFolder)
         elif isS3File(f):
             i += 1 # not yet
-            processS3File(db, table_s3, srcFolder, f, bkpFolder, i)
+            if table_s3:
+                processS3File(db, ts, table_s3, srcFolder, f, bkpFolder, i)
+            else:
+                raise Exception('no table_s3 defined in config file')
         else:
             if not os.path.isdir(filename):
                 log(f'[W] not a CF log file: {filename}, skipped', 2)
@@ -195,6 +204,8 @@ def processFolder(db, table_cf, table_s3, srcFolder, bkpFolder):
     if i == 0:
         log('Nothing to process.')
         return 0
+    else:
+        log(f'Files processed: {i}, records created: {c}')
         
     return i
             
