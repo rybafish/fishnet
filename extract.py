@@ -89,6 +89,7 @@ def extract(bucketName, folder, delFlag=False):
     s3 = boto3.resource('s3')
     s3client = boto3.client('s3')
     #s3 = boto3.resource('s3', aws_access_key_id='...', aws_secret_access_key='...')
+    #but if not specified, ~/.aws/credentials used
     
     log('Connected, init page iterrator...')
         
