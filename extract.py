@@ -137,7 +137,8 @@ def extract(bucketName, folder, delFlag=False):
 
                             if deleteFlag:
                                 with profiler('Object delete'):
-                                    s3.Object(bucketName, f['Key']).delete()
+                                    # s3.Object(bucketName, f['Key']).delete()
+                                    s3client.delete_object(Bucket=bucketName, Key=f['Key'])
                             
                             i+=1
                 except KeyboardInterrupt:
