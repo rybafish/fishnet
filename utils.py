@@ -31,7 +31,7 @@ configStats = {}
 def loadConfig(silent=False):
 
     global config
-    
+
     script = sys.argv[0]
     path, file = os.path.split(script)
     
@@ -44,9 +44,11 @@ def loadConfig(silent=False):
         config = safe_load(f)
         f.close()
                     
-    except:
+    except Exception as e:
+        print('Config error:', e)
         if not silent:
             log('no config file? <-')
+            log(str(e))
             
         config = {}
         

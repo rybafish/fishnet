@@ -16,6 +16,8 @@ from botocore.exceptions import ClientError
 import os
 from utils import intToStr, profiler, log, fileBytes, cfg
 
+import utils
+
 conf_bucket = cfg('s3_bucket')
 conf_folder = cfg('download_folder')
 conf_delete = cfg('delete_remote_files')
@@ -92,8 +94,10 @@ def extract(bucketName, folder, delFlag=False):
     conf_aws_secret = cfg('access_key')
 
     if conf_aws_key and conf_aws_secret:
-        s3client = boto3.client('s3', aws_access_key_id=aws_key, aws_secret_access_key=aws_secret)
+        log('using custom aws key')
+        s3client = boto3.client('s3', aws_access_key_id=conf_aws_key, aws_secret_access_key=conf_aws_secret)
     else:
+        log('using default aws conf')
         s3client = boto3.client('s3')
 
     #s3 = boto3.resource('s3', aws_access_key_id='...', aws_secret_access_key='...')
